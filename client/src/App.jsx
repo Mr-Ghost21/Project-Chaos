@@ -18,9 +18,7 @@ const BLOCKED_NAME_WORDS = [
 function validatePlayerNameInput(playerName) {
   const cleanPlayerName = String(playerName || "").trim();
 
-  if (!cleanPlayerName) {
-    return "Please enter a valid name.";
-  }
+  if (!cleanPlayerName) return "Please enter a valid name.";
 
   if (cleanPlayerName.length > 10) {
     return "Name cannot be more than 10 characters.";
@@ -40,9 +38,7 @@ function validatePlayerNameInput(playerName) {
     lowerName.includes(word)
   );
 
-  if (hasBlockedWord) {
-    return "Please choose a clean name.";
-  }
+  if (hasBlockedWord) return "Please choose a clean name.";
 
   return "";
 }
@@ -61,7 +57,24 @@ function getOrCreatePlayerKey() {
   return newKey;
 }
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  useEffect(() => {
+    function handleResize() {
+      setIsMobile(window.innerWidth <= 768);
+    }
+
+    window.addEventListener("resize", handleResize);
+
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  return isMobile;
+}
+
 const PLAYER_KEY = getOrCreatePlayerKey();
+
 const SERVER_URL =
   import.meta.env.VITE_SERVER_URL || "http://localhost:3001";
 
@@ -114,6 +127,8 @@ function TypewriterText({ text, speed = 55, style }) {
 }
 
 function App() {
+  const isMobile = useIsMobile();
+
   const [playerName, setPlayerName] = useState("");
   const [screen, setScreen] = useState("start");
   const [joinCode, setJoinCode] = useState("");
@@ -139,6 +154,7 @@ function App() {
     doctorMax: 1,
     locked: true,
   };
+
   const currentPlayer = players.find((player) => player.id === playerId);
   const isAlive = currentPlayer ? currentPlayer.alive : true;
   const isDisconnected = currentPlayer ? currentPlayer.disconnected : false;
@@ -148,6 +164,34 @@ function App() {
   const usedTimeControl = room?.timeControlUsedPlayerIds?.includes(playerId);
   const isChaos = room?.settings?.mode === "Chaos Demo";
   const roomHistory = room?.roomAllotmentHistory || [];
+
+  const pageStyle = isMobile
+    ? { ...styles.page, ...styles.mobilePage }
+    : styles.page;
+
+  const cardStyle = isMobile
+    ? { ...styles.card, ...styles.mobileCard }
+    : styles.card;
+
+  const wideCardStyle = isMobile
+    ? { ...styles.wideCard, ...styles.mobileWideCard }
+    : styles.wideCard;
+
+  const titleStyle = isMobile
+    ? { ...styles.title, ...styles.mobileTitle }
+    : styles.title;
+
+  const bigPhaseTextStyle = isMobile
+    ? { ...styles.bigPhaseText, ...styles.mobileBigPhaseText }
+    : styles.bigPhaseText;
+
+  const subtitleStyle = isMobile
+    ? { ...styles.subtitle, ...styles.mobileSubtitle }
+    : styles.subtitle;
+
+  const actionGridStyle = isMobile
+    ? { ...styles.actionGrid, ...styles.mobileActionGrid }
+    : styles.actionGrid;
 
   useEffect(() => {
     socket.on("connect", () => {
@@ -542,6 +586,43 @@ function App() {
     return {};
   }
 
+  function getCircleBoardStyle() {
+    return isMobile
+      ? { ...styles.circleBoard, ...styles.mobileCircleBoard }
+      : styles.circleBoard;
+  }
+
+  function getCircleRoomStyle(roomCount, status) {
+    const mobileSize =
+      roomCount > 12
+        ? styles.mobileCircleRoomTiny
+        : roomCount > 10
+        ? styles.mobileCircleRoomSmall
+        : styles.mobileCircleRoom;
+
+    return {
+      ...styles.circleRoom,
+      ...(isMobile ? mobileSize : {}),
+      ...getRoomStatusStyle(status),
+    };
+  }
+
+  function getCircleRoomButtonStyle(roomCount, isSelected, isDisabled) {
+    const mobileSize =
+      roomCount > 12
+        ? styles.mobileCircleRoomButtonTiny
+        : roomCount > 10
+        ? styles.mobileCircleRoomButtonSmall
+        : styles.mobileCircleRoomButton;
+
+    return {
+      ...styles.circleRoomButton,
+      ...(isMobile ? mobileSize : {}),
+      ...(isSelected ? styles.selectedCircleRoom : {}),
+      ...(isDisabled ? styles.disabledRoomButton : {}),
+    };
+  }
+
   function renderSystemMessages() {
     if (!room?.systemMessages?.length) return null;
 
@@ -561,6 +642,7 @@ function App() {
 
     const roomCount = snapshot.roomCount;
     const roomNumbers = Array.from({ length: roomCount }, (_, index) => index + 1);
+    const radius = isMobile ? 38 : 39;
 
     return (
       <div style={styles.circleSection}>
@@ -568,8 +650,14 @@ function App() {
 
         {subtitle && <p style={styles.smallText}>{subtitle}</p>}
 
-        <div style={styles.circleBoard}>
-          <div style={styles.circleCenter}>
+        <div style={getCircleBoardStyle()}>
+          <div
+            style={
+              isMobile
+                ? { ...styles.circleCenter, ...styles.mobileCircleCenter }
+                : styles.circleCenter
+            }
+          >
             <strong>Day {snapshot.day}</strong>
             <span>{roomCount} Rooms</span>
           </div>
@@ -580,15 +668,14 @@ function App() {
             );
 
             const angle = (2 * Math.PI * index) / roomCount - Math.PI / 2;
-            const left = 50 + 39 * Math.cos(angle);
-            const top = 50 + 39 * Math.sin(angle);
+            const left = 50 + radius * Math.cos(angle);
+            const top = 50 + radius * Math.sin(angle);
 
             return (
               <div
                 key={roomNumber}
                 style={{
-                  ...styles.circleRoom,
-                  ...getRoomStatusStyle(entry?.status),
+                  ...getCircleRoomStyle(roomCount, entry?.status),
                   left: `${left}%`,
                   top: `${top}%`,
                 }}
@@ -653,7 +740,14 @@ function App() {
         <h2 style={styles.sectionTitle}>Players</h2>
 
         {players.map((player) => (
-          <div key={player.id} style={styles.playerRow}>
+          <div
+            key={player.id}
+            style={
+              isMobile
+                ? { ...styles.playerRow, ...styles.mobilePlayerRow }
+                : styles.playerRow
+            }
+          >
             <span>{player.name}</span>
 
             <div style={styles.badgeGroup}>
@@ -699,7 +793,13 @@ function App() {
 
   function renderSidebar() {
     return (
-      <aside style={styles.sidebar}>
+      <aside
+        style={
+          isMobile
+            ? { ...styles.sidebar, ...styles.mobileSidebar }
+            : styles.sidebar
+        }
+      >
         <h2 style={styles.sidebarTitle}>Mafia 2.0</h2>
 
         <div style={styles.sidebarRoleBox}>
@@ -778,8 +878,8 @@ function App() {
 
   function renderRoleReveal() {
     return (
-      <div style={styles.card}>
-        <h1 style={styles.title}>Your Role</h1>
+      <div style={cardStyle}>
+        <h1 style={titleStyle}>Your Role</h1>
 
         <div style={styles.section}>
           <h2 style={styles.roleName}>{yourRole}</h2>
@@ -798,23 +898,37 @@ function App() {
 
   function renderStoryIntro() {
     return (
-      <div style={styles.storyCard}>
-        <TypewriterText text={STORY_INTRO} speed={55} style={styles.storyText} />
+      <div
+        style={
+          isMobile
+            ? { ...styles.storyCard, ...styles.mobileStoryCard }
+            : styles.storyCard
+        }
+      >
+        <TypewriterText
+          text={STORY_INTRO}
+          speed={55}
+          style={
+            isMobile
+              ? { ...styles.storyText, ...styles.mobileStoryText }
+              : styles.storyText
+          }
+        />
       </div>
     );
   }
 
   function renderDayTitle() {
     return (
-      <div style={styles.card}>
-        <h1 style={styles.bigPhaseText}>Day {room?.dayNumber}</h1>
+      <div style={cardStyle}>
+        <h1 style={bigPhaseTextStyle}>Day {room?.dayNumber}</h1>
 
         {isChaos && room?.dayNumber === 1 && (
-          <p style={styles.subtitle}>Rooms will be assigned randomly by the bot.</p>
+          <p style={subtitleStyle}>Rooms will be assigned randomly by the bot.</p>
         )}
 
         {isChaos && room?.dayNumber > 1 && (
-          <p style={styles.subtitle}>Prepare to choose your room.</p>
+          <p style={subtitleStyle}>Prepare to choose your room.</p>
         )}
       </div>
     );
@@ -822,10 +936,17 @@ function App() {
 
   function renderRoomSelectionCircle(roomNumbers, selectedRooms) {
     const roomCount = roomNumbers.length;
+    const radius = isMobile ? 38 : 39;
 
     return (
-      <div style={styles.circleBoard}>
-        <div style={styles.circleCenter}>
+      <div style={getCircleBoardStyle()}>
+        <div
+          style={
+            isMobile
+              ? { ...styles.circleCenter, ...styles.mobileCircleCenter }
+              : styles.circleCenter
+          }
+        >
           <strong>Choose</strong>
           <span>Your Room</span>
         </div>
@@ -840,18 +961,18 @@ function App() {
             currentPlayer?.selectedRoom !== roomNumber;
 
           const angle = (2 * Math.PI * index) / roomCount - Math.PI / 2;
-          const left = 50 + 39 * Math.cos(angle);
-          const top = 50 + 39 * Math.sin(angle);
+          const left = 50 + radius * Math.cos(angle);
+          const top = 50 + radius * Math.sin(angle);
 
           return (
             <button
               key={roomNumber}
               style={{
-                ...styles.circleRoomButton,
-                ...(currentPlayer?.selectedRoom === roomNumber
-                  ? styles.selectedCircleRoom
-                  : {}),
-                ...(takenByOther ? styles.disabledRoomButton : {}),
+                ...getCircleRoomButtonStyle(
+                  roomCount,
+                  currentPlayer?.selectedRoom === roomNumber,
+                  takenByOther
+                ),
                 left: `${left}%`,
                 top: `${top}%`,
               }}
@@ -878,12 +999,12 @@ function App() {
       .map((player) => player.selectedRoom);
 
     return (
-      <div style={styles.wideCard}>
-        <h1 style={styles.title}>Choose Your Room</h1>
+      <div style={wideCardStyle}>
+        <h1 style={titleStyle}>Choose Your Room</h1>
 
         <p style={styles.timerText}>Time left: {timeLeft}s</p>
 
-        <p style={styles.subtitle}>
+        <p style={subtitleStyle}>
           Select one room. If you do not choose, the bot will assign a leftover
           room.
         </p>
@@ -910,7 +1031,14 @@ function App() {
           <h2 style={styles.sectionTitle}>Selections</h2>
 
           {alivePlayers.map((player) => (
-            <div key={player.id} style={styles.playerRow}>
+            <div
+              key={player.id}
+              style={
+                isMobile
+                  ? { ...styles.playerRow, ...styles.mobilePlayerRow }
+                  : styles.playerRow
+              }
+            >
               <span>{player.name}</span>
 
               <span style={styles.roomBadge}>
@@ -925,8 +1053,8 @@ function App() {
 
   function renderNight() {
     return (
-      <div style={styles.wideCard}>
-        <h1 style={styles.title}>Night {room?.dayNumber}</h1>
+      <div style={wideCardStyle}>
+        <h1 style={titleStyle}>Night {room?.dayNumber}</h1>
 
         <p style={styles.timerText}>Time left: {timeLeft}s</p>
 
@@ -957,7 +1085,7 @@ function App() {
           <div style={styles.section}>
             <h2 style={styles.sectionTitle}>Choose one player to eliminate</h2>
 
-            <div style={styles.actionGrid}>
+            <div style={actionGridStyle}>
               {alivePlayers
                 .filter((player) => player.id !== playerId)
                 .map((player) => {
@@ -968,6 +1096,7 @@ function App() {
                       key={player.id}
                       style={{
                         ...styles.actionButton,
+                        ...(isMobile ? styles.mobileActionButton : {}),
                         ...(selectedNightTarget === player.id
                           ? styles.selectedButton
                           : {}),
@@ -997,7 +1126,7 @@ function App() {
           <div style={styles.section}>
             <h2 style={styles.sectionTitle}>Choose one player to heal</h2>
 
-            <div style={styles.actionGrid}>
+            <div style={actionGridStyle}>
               {alivePlayers.map((player) => {
                 const allowed = canDoctorHeal(player);
 
@@ -1006,6 +1135,7 @@ function App() {
                     key={player.id}
                     style={{
                       ...styles.actionButton,
+                      ...(isMobile ? styles.mobileActionButton : {}),
                       ...(selectedNightTarget === player.id
                         ? styles.selectedButton
                         : {}),
@@ -1043,8 +1173,8 @@ function App() {
 
   function renderNightResult() {
     return (
-      <div style={styles.wideCard}>
-        <h1 style={styles.title}>Morning News</h1>
+      <div style={wideCardStyle}>
+        <h1 style={titleStyle}>Morning News</h1>
 
         <div style={styles.announcementBox}>{room?.announcement}</div>
 
@@ -1058,8 +1188,8 @@ function App() {
 
   function renderDiscussion() {
     return (
-      <div style={styles.wideCard}>
-        <h1 style={styles.title}>Discussion</h1>
+      <div style={wideCardStyle}>
+        <h1 style={titleStyle}>Discussion</h1>
 
         <p style={styles.timerText}>Time left: {timeLeft}s</p>
 
@@ -1105,7 +1235,13 @@ function App() {
           </div>
 
           {canParticipate ? (
-            <div style={styles.chatInputRow}>
+            <div
+              style={
+                isMobile
+                  ? { ...styles.chatInputRow, ...styles.mobileChatInputRow }
+                  : styles.chatInputRow
+              }
+            >
               <input
                 style={styles.chatInput}
                 type="text"
@@ -1131,16 +1267,16 @@ function App() {
 
   function renderVotingIntro() {
     return (
-      <div style={styles.card}>
-        <h1 style={styles.bigPhaseText}>Voting Begins</h1>
+      <div style={cardStyle}>
+        <h1 style={bigPhaseTextStyle}>Voting Begins</h1>
       </div>
     );
   }
 
   function renderVoting() {
     return (
-      <div style={styles.wideCard}>
-        <h1 style={styles.title}>Vote Now</h1>
+      <div style={wideCardStyle}>
+        <h1 style={titleStyle}>Vote Now</h1>
 
         <p style={styles.timerText}>Time left: {timeLeft}s</p>
 
@@ -1151,7 +1287,7 @@ function App() {
           <div style={styles.section}>
             <h2 style={styles.sectionTitle}>Choose one player or skip</h2>
 
-            <div style={styles.actionGrid}>
+            <div style={actionGridStyle}>
               {alivePlayers
                 .filter((player) => player.id !== playerId)
                 .map((player) => (
@@ -1159,6 +1295,7 @@ function App() {
                     key={player.id}
                     style={{
                       ...styles.actionButton,
+                      ...(isMobile ? styles.mobileActionButton : {}),
                       ...(selectedVote === player.id ? styles.selectedButton : {}),
                     }}
                     onClick={() => handleVote(player.id)}
@@ -1170,6 +1307,7 @@ function App() {
               <button
                 style={{
                   ...styles.actionButton,
+                  ...(isMobile ? styles.mobileActionButton : {}),
                   ...(selectedVote === "skip" ? styles.selectedButton : {}),
                 }}
                 onClick={() => handleVote(null)}
@@ -1195,8 +1333,8 @@ function App() {
 
   function renderVoteResult() {
     return (
-      <div style={styles.wideCard}>
-        <h1 style={styles.title}>Vote Result</h1>
+      <div style={wideCardStyle}>
+        <h1 style={titleStyle}>Vote Result</h1>
 
         <div style={styles.announcementBox}>{room?.voteResultMessage}</div>
 
@@ -1214,8 +1352,8 @@ function App() {
 
   function renderGameOver() {
     return (
-      <div style={styles.wideCard}>
-        <h1 style={styles.title}>Game Over</h1>
+      <div style={wideCardStyle}>
+        <h1 style={titleStyle}>Game Over</h1>
 
         <div style={styles.announcementBox}>
           {room?.winner === "Villagers"
@@ -1271,8 +1409,8 @@ function App() {
   function renderGameScreen() {
     if (!room) {
       return (
-        <div style={styles.card}>
-          <h1 style={styles.title}>Loading Game...</h1>
+        <div style={cardStyle}>
+          <h1 style={titleStyle}>Loading Game...</h1>
         </div>
       );
     }
@@ -1290,8 +1428,8 @@ function App() {
     if (room.phase === "gameOver") return renderGameOver();
 
     return (
-      <div style={styles.card}>
-        <h1 style={styles.title}>Unknown Phase</h1>
+      <div style={cardStyle}>
+        <h1 style={titleStyle}>Unknown Phase</h1>
       </div>
     );
   }
@@ -1310,7 +1448,13 @@ function App() {
           ))}
         </div>
 
-        <div style={styles.chatInputRow}>
+        <div
+          style={
+            isMobile
+              ? { ...styles.chatInputRow, ...styles.mobileChatInputRow }
+              : styles.chatInputRow
+          }
+        >
           <input
             style={styles.chatInput}
             type="text"
@@ -1330,19 +1474,33 @@ function App() {
 
   if (screen === "game") {
     return (
-      <div style={styles.gamePage}>
+      <div
+        style={
+          isMobile
+            ? { ...styles.gamePage, ...styles.mobileGamePage }
+            : styles.gamePage
+        }
+      >
         {renderSidebar()}
 
-        <main style={styles.gameMain}>{renderGameScreen()}</main>
+        <main
+          style={
+            isMobile
+              ? { ...styles.gameMain, ...styles.mobileGameMain }
+              : styles.gameMain
+          }
+        >
+          {renderGameScreen()}
+        </main>
       </div>
     );
   }
 
   if (screen === "lobby") {
     return (
-      <div style={styles.page}>
-        <div style={styles.wideCard}>
-          <h1 style={styles.title}>Game Lobby</h1>
+      <div style={pageStyle}>
+        <div style={wideCardStyle}>
+          <h1 style={titleStyle}>Game Lobby</h1>
 
           <div style={styles.roomCodeBox}>
             <p style={styles.smallText}>
@@ -1351,7 +1509,13 @@ function App() {
                 : "Joined Room:"}
             </p>
 
-            <div style={styles.roomCodeRow}>
+            <div
+              style={
+                isMobile
+                  ? { ...styles.roomCodeRow, ...styles.mobileRoomCodeRow }
+                  : styles.roomCodeRow
+              }
+            >
               <h2 style={styles.roomCode}>{room?.roomCode}</h2>
 
               <button style={styles.copyButton} onClick={handleCopyRoomCode}>
@@ -1505,11 +1669,11 @@ function App() {
 
   if (screen === "joinRoom") {
     return (
-      <div style={styles.page}>
-        <div style={styles.card}>
-          <h1 style={styles.title}>Join Room</h1>
+      <div style={pageStyle}>
+        <div style={cardStyle}>
+          <h1 style={titleStyle}>Join Room</h1>
 
-          <p style={styles.subtitle}>Enter the room code shared by the host.</p>
+          <p style={subtitleStyle}>Enter the room code shared by the host.</p>
 
           <div style={styles.inputGroup}>
             <label style={styles.label}>Room Code</label>
@@ -1540,11 +1704,11 @@ function App() {
 
   if (screen === "roomSelection") {
     return (
-      <div style={styles.page}>
-        <div style={styles.card}>
-          <h1 style={styles.title}>Choose Your Room</h1>
+      <div style={pageStyle}>
+        <div style={cardStyle}>
+          <h1 style={titleStyle}>Choose Your Room</h1>
 
-          <p style={styles.subtitle}>
+          <p style={subtitleStyle}>
             Welcome, <strong>{playerName}</strong>. Create a room or join your
             friends.
           </p>
@@ -1566,11 +1730,11 @@ function App() {
   }
 
   return (
-    <div style={styles.page}>
-      <div style={styles.card}>
-        <h1 style={styles.title}>PROJECT CHAOS</h1>
+    <div style={pageStyle}>
+      <div style={cardStyle}>
+        <h1 style={titleStyle}>PROJECT CHAOS</h1>
 
-        <p style={styles.subtitle}>
+        <p style={subtitleStyle}>
           A social deduction game of trust, confusion, and survival.
         </p>
 
@@ -1612,6 +1776,10 @@ const styles = {
     padding: "24px",
     boxSizing: "border-box",
   },
+  mobilePage: {
+    padding: "12px",
+    alignItems: "flex-start",
+  },
   gamePage: {
     minHeight: "100vh",
     background:
@@ -1619,6 +1787,10 @@ const styles = {
     display: "flex",
     color: "white",
     fontFamily: "Arial, sans-serif",
+  },
+  mobileGamePage: {
+    flexDirection: "column",
+    width: "100%",
   },
   sidebar: {
     width: "300px",
@@ -1629,17 +1801,25 @@ const styles = {
     borderRight: "1px solid rgba(255, 255, 255, 0.12)",
     overflowY: "auto",
   },
+  mobileSidebar: {
+    width: "100%",
+    minHeight: "auto",
+    padding: "14px",
+    borderRight: "none",
+    borderBottom: "1px solid rgba(255, 255, 255, 0.12)",
+    maxHeight: "none",
+  },
   sidebarTitle: {
     marginTop: 0,
     fontSize: "26px",
     letterSpacing: "1px",
   },
   sidebarRoleBox: {
-    padding: "16px",
+    padding: "14px",
     borderRadius: "14px",
     background: "rgba(139, 92, 246, 0.18)",
     border: "1px solid rgba(139, 92, 246, 0.45)",
-    marginBottom: "20px",
+    marginBottom: "14px",
   },
   sidebarLabel: {
     margin: 0,
@@ -1649,7 +1829,7 @@ const styles = {
   sidebarRole: {
     margin: "8px 0",
     color: "#facc15",
-    fontSize: "26px",
+    fontSize: "24px",
   },
   sidebarDescription: {
     color: "#ffffff",
@@ -1657,10 +1837,10 @@ const styles = {
     lineHeight: "1.5",
   },
   sidebarMeta: {
-    padding: "14px",
+    padding: "12px",
     borderRadius: "14px",
     background: "rgba(255, 255, 255, 0.06)",
-    marginBottom: "20px",
+    marginBottom: "14px",
     fontSize: "14px",
   },
   sidebarButton: {
@@ -1675,12 +1855,12 @@ const styles = {
     marginBottom: "14px",
   },
   sidebarHistoryPanel: {
-    padding: "14px",
+    padding: "12px",
     borderRadius: "14px",
     background: "rgba(20, 184, 166, 0.1)",
     border: "1px solid rgba(20, 184, 166, 0.35)",
-    marginBottom: "20px",
-    maxHeight: "260px",
+    marginBottom: "14px",
+    maxHeight: "220px",
     overflowY: "auto",
   },
   sidebarHistoryTitle: {
@@ -1699,7 +1879,7 @@ const styles = {
     fontSize: "13px",
   },
   sidebarPlayers: {
-    padding: "14px",
+    padding: "12px",
     borderRadius: "14px",
     background: "rgba(255, 255, 255, 0.06)",
   },
@@ -1709,6 +1889,7 @@ const styles = {
     padding: "8px 0",
     borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
     fontSize: "14px",
+    gap: "10px",
   },
   gameMain: {
     flex: 1,
@@ -1719,6 +1900,11 @@ const styles = {
     padding: "24px",
     boxSizing: "border-box",
   },
+  mobileGameMain: {
+    minHeight: "auto",
+    padding: "12px",
+    alignItems: "flex-start",
+  },
   card: {
     width: "430px",
     padding: "40px",
@@ -1727,6 +1913,12 @@ const styles = {
     boxShadow: "0 20px 60px rgba(0, 0, 0, 0.4)",
     textAlign: "center",
     border: "1px solid rgba(255, 255, 255, 0.15)",
+    boxSizing: "border-box",
+  },
+  mobileCard: {
+    width: "100%",
+    padding: "20px",
+    borderRadius: "16px",
   },
   wideCard: {
     width: "860px",
@@ -1738,6 +1930,13 @@ const styles = {
     boxShadow: "0 20px 60px rgba(0, 0, 0, 0.4)",
     textAlign: "center",
     border: "1px solid rgba(255, 255, 255, 0.15)",
+    boxSizing: "border-box",
+  },
+  mobileWideCard: {
+    width: "100%",
+    maxHeight: "none",
+    padding: "16px",
+    borderRadius: "16px",
   },
   storyCard: {
     width: "720px",
@@ -1751,10 +1950,21 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
   },
+  mobileStoryCard: {
+    width: "100%",
+    minHeight: "420px",
+    padding: "22px",
+    boxSizing: "border-box",
+  },
   title: {
     fontSize: "42px",
     marginBottom: "12px",
     letterSpacing: "2px",
+  },
+  mobileTitle: {
+    fontSize: "28px",
+    letterSpacing: "1px",
+    lineHeight: "1.2",
   },
   subtitle: {
     fontSize: "16px",
@@ -1762,12 +1972,20 @@ const styles = {
     marginBottom: "32px",
     lineHeight: "1.5",
   },
+  mobileSubtitle: {
+    fontSize: "14px",
+    marginBottom: "20px",
+  },
   storyText: {
     fontSize: "26px",
     lineHeight: "1.9",
     color: "#ffffff",
     whiteSpace: "pre-line",
     textAlign: "center",
+  },
+  mobileStoryText: {
+    fontSize: "18px",
+    lineHeight: "1.8",
   },
   typingText: {
     fontSize: "18px",
@@ -1781,24 +1999,31 @@ const styles = {
     fontSize: "58px",
     letterSpacing: "4px",
   },
+  mobileBigPhaseText: {
+    fontSize: "38px",
+    letterSpacing: "2px",
+  },
   timerText: {
-    fontSize: "22px",
+    fontSize: "20px",
     fontWeight: "bold",
     color: "#facc15",
-    marginBottom: "24px",
+    marginBottom: "20px",
   },
   roomCodeBox: {
-    padding: "18px",
+    padding: "16px",
     borderRadius: "14px",
     background: "rgba(139, 92, 246, 0.18)",
     border: "1px solid rgba(139, 92, 246, 0.45)",
-    marginBottom: "24px",
+    marginBottom: "20px",
   },
   roomCodeRow: {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     gap: "12px",
+  },
+  mobileRoomCodeRow: {
+    flexDirection: "column",
   },
   copyButton: {
     padding: "9px 14px",
@@ -1817,7 +2042,8 @@ const styles = {
   smallText: {
     margin: "10px 0",
     color: "#cfc7ff",
-    fontSize: "14px",
+    fontSize: "13px",
+    lineHeight: "1.4",
   },
   nameRuleText: {
     margin: "8px 0 0",
@@ -1827,6 +2053,7 @@ const styles = {
   roomCode: {
     margin: "8px 0",
     letterSpacing: "2px",
+    wordBreak: "break-word",
   },
   inputGroup: {
     textAlign: "left",
@@ -1883,8 +2110,8 @@ const styles = {
   },
   section: {
     textAlign: "left",
-    marginBottom: "26px",
-    padding: "18px",
+    marginBottom: "20px",
+    padding: "14px",
     borderRadius: "14px",
     background: "rgba(0, 0, 0, 0.25)",
     border: "1px solid rgba(255, 255, 255, 0.1)",
@@ -1892,10 +2119,10 @@ const styles = {
   sectionTitle: {
     marginTop: 0,
     marginBottom: "14px",
-    fontSize: "20px",
+    fontSize: "19px",
   },
   roleName: {
-    fontSize: "38px",
+    fontSize: "34px",
     textAlign: "center",
     color: "#facc15",
     letterSpacing: "2px",
@@ -1908,6 +2135,11 @@ const styles = {
     borderRadius: "10px",
     background: "rgba(255, 255, 255, 0.08)",
     marginBottom: "10px",
+    gap: "12px",
+  },
+  mobilePlayerRow: {
+    flexDirection: "column",
+    alignItems: "flex-start",
   },
   badgeGroup: {
     display: "flex",
@@ -1985,6 +2217,7 @@ const styles = {
     alignItems: "center",
     padding: "10px 0",
     borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
+    gap: "12px",
   },
   select: {
     padding: "8px",
@@ -2007,36 +2240,38 @@ const styles = {
     marginBottom: "16px",
   },
   announcementBox: {
-    padding: "18px",
+    padding: "16px",
     borderRadius: "14px",
     background: "rgba(250, 204, 21, 0.12)",
     border: "1px solid rgba(250, 204, 21, 0.45)",
     color: "#fff7cc",
-    fontSize: "20px",
+    fontSize: "17px",
     fontWeight: "bold",
     textAlign: "center",
-    marginBottom: "22px",
+    marginBottom: "20px",
+    lineHeight: "1.4",
   },
   systemBox: {
-    padding: "14px",
+    padding: "12px",
     borderRadius: "14px",
     background: "rgba(168, 85, 247, 0.14)",
     border: "1px solid rgba(168, 85, 247, 0.4)",
-    marginBottom: "22px",
+    marginBottom: "18px",
     textAlign: "left",
   },
   systemMessage: {
     margin: "6px 0",
     color: "#f5d0fe",
-    fontSize: "14px",
+    fontSize: "13px",
   },
   circleSection: {
     textAlign: "left",
-    marginBottom: "26px",
-    padding: "18px",
+    marginBottom: "20px",
+    padding: "14px",
     borderRadius: "14px",
     background: "rgba(20, 184, 166, 0.12)",
     border: "1px solid rgba(20, 184, 166, 0.4)",
+    overflowX: "hidden",
   },
   circleBoard: {
     position: "relative",
@@ -2046,6 +2281,11 @@ const styles = {
     borderRadius: "50%",
     border: "2px dashed rgba(20, 184, 166, 0.45)",
     background: "rgba(0, 0, 0, 0.22)",
+  },
+  mobileCircleBoard: {
+    width: "min(340px, 92vw)",
+    height: "min(340px, 92vw)",
+    margin: "20px auto",
   },
   circleCenter: {
     position: "absolute",
@@ -2065,6 +2305,11 @@ const styles = {
     color: "white",
     textAlign: "center",
   },
+  mobileCircleCenter: {
+    width: "82px",
+    height: "82px",
+    fontSize: "11px",
+  },
   circleRoom: {
     position: "absolute",
     transform: "translate(-50%, -50%)",
@@ -2081,6 +2326,28 @@ const styles = {
     gap: "4px",
     textAlign: "center",
     fontSize: "13px",
+    boxSizing: "border-box",
+  },
+  mobileCircleRoom: {
+    width: "78px",
+    minHeight: "54px",
+    padding: "6px",
+    fontSize: "10px",
+    borderRadius: "11px",
+  },
+  mobileCircleRoomSmall: {
+    width: "64px",
+    minHeight: "48px",
+    padding: "5px",
+    fontSize: "9px",
+    borderRadius: "10px",
+  },
+  mobileCircleRoomTiny: {
+    width: "54px",
+    minHeight: "44px",
+    padding: "4px",
+    fontSize: "8px",
+    borderRadius: "9px",
   },
   circleRoomButton: {
     position: "absolute",
@@ -2100,6 +2367,28 @@ const styles = {
     gap: "4px",
     textAlign: "center",
     fontSize: "13px",
+    boxSizing: "border-box",
+  },
+  mobileCircleRoomButton: {
+    width: "80px",
+    minHeight: "56px",
+    padding: "6px",
+    fontSize: "10px",
+    borderRadius: "11px",
+  },
+  mobileCircleRoomButtonSmall: {
+    width: "66px",
+    minHeight: "50px",
+    padding: "5px",
+    fontSize: "9px",
+    borderRadius: "10px",
+  },
+  mobileCircleRoomButtonTiny: {
+    width: "56px",
+    minHeight: "46px",
+    padding: "4px",
+    fontSize: "8px",
+    borderRadius: "9px",
   },
   selectedCircleRoom: {
     background: "rgba(139, 92, 246, 0.75)",
@@ -2118,27 +2407,33 @@ const styles = {
     border: "1px solid rgba(249, 115, 22, 0.65)",
   },
   ruleBox: {
-    padding: "14px",
+    padding: "12px",
     borderRadius: "14px",
     background: "rgba(59, 130, 246, 0.13)",
     border: "1px solid rgba(59, 130, 246, 0.4)",
-    marginBottom: "22px",
+    marginBottom: "18px",
     color: "#dbeafe",
     textAlign: "left",
+    fontSize: "13px",
+    lineHeight: "1.4",
   },
   nightImageBox: {
-    padding: "40px",
+    padding: "26px",
     borderRadius: "18px",
     background:
       "linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.8))",
     border: "1px solid rgba(148, 163, 184, 0.35)",
-    marginBottom: "24px",
+    marginBottom: "20px",
     textAlign: "center",
   },
   actionGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
     gap: "12px",
+  },
+  mobileActionGrid: {
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gap: "10px",
   },
   actionButton: {
     padding: "14px",
@@ -2150,6 +2445,11 @@ const styles = {
     fontWeight: "bold",
     cursor: "pointer",
     minHeight: "76px",
+  },
+  mobileActionButton: {
+    padding: "10px",
+    fontSize: "12px",
+    minHeight: "68px",
   },
   targetButtonContent: {
     display: "flex",
@@ -2169,12 +2469,12 @@ const styles = {
   },
   timeControlRow: {
     display: "flex",
-    gap: "12px",
+    gap: "10px",
     justifyContent: "center",
-    marginBottom: "16px",
+    marginBottom: "14px",
   },
   smallButton: {
-    padding: "10px 18px",
+    padding: "10px 16px",
     borderRadius: "10px",
     border: "1px solid rgba(255, 255, 255, 0.25)",
     background: "rgba(255, 255, 255, 0.08)",
@@ -2184,27 +2484,32 @@ const styles = {
   },
   chatBox: {
     textAlign: "left",
-    marginBottom: "26px",
-    padding: "18px",
+    marginBottom: "20px",
+    padding: "14px",
     borderRadius: "14px",
     background: "rgba(0, 0, 0, 0.25)",
     border: "1px solid rgba(255, 255, 255, 0.1)",
   },
   chatMessages: {
-    height: "180px",
+    height: "170px",
     overflowY: "auto",
     padding: "12px",
     borderRadius: "10px",
     background: "rgba(0, 0, 0, 0.35)",
     marginBottom: "12px",
+    fontSize: "14px",
   },
   chatMessage: {
     marginBottom: "10px",
     color: "white",
+    wordBreak: "break-word",
   },
   chatInputRow: {
     display: "flex",
     gap: "10px",
+  },
+  mobileChatInputRow: {
+    flexDirection: "column",
   },
   chatInput: {
     flex: 1,
@@ -2215,6 +2520,8 @@ const styles = {
     color: "white",
     fontSize: "15px",
     outline: "none",
+    boxSizing: "border-box",
+    width: "100%",
   },
   sendButton: {
     padding: "12px 18px",
@@ -2236,6 +2543,7 @@ const styles = {
     border: "1px solid rgba(255, 255, 255, 0.12)",
     marginBottom: "12px",
     lineHeight: "1.7",
+    wordBreak: "break-word",
   },
 };
 
