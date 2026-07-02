@@ -735,6 +735,10 @@ function App() {
   }
 
   function renderPlayerList() {
+    if (room?.gameStarted) {
+      return null;
+    }
+
     return (
       <div style={styles.section}>
         <h2 style={styles.sectionTitle}>Players</h2>
@@ -758,18 +762,6 @@ function App() {
               >
                 {player.type}
               </span>
-
-              {room?.gameStarted && (
-                <span style={getPlayerStatusStyle(player)}>
-                  {getPlayerStatusText(player)}
-                </span>
-              )}
-
-              {room?.gameStarted && isChaos && player.roomNumber && (
-                <span style={styles.roomBadge}>Room {player.roomNumber}</span>
-              )}
-
-              {player.role && <span style={styles.roleBadge}>{player.role}</span>}
             </div>
           </div>
         ))}
@@ -792,14 +784,55 @@ function App() {
   }
 
   function renderSidebar() {
+    if (isMobile) {
+      return (
+        <aside style={{ ...styles.sidebar, ...styles.mobileGameTopPanel }}>
+          <h2 style={styles.mobileGameTitle}>Mafia 2.0</h2>
+
+          <div style={styles.mobileStatusGrid}>
+            <div style={styles.mobileInfoBox}>
+              <span style={styles.mobileInfoLabel}>Role</span>
+              <strong style={styles.mobileInfoValue}>
+                {yourRole || "Unknown"}
+              </strong>
+            </div>
+
+            <div style={styles.mobileInfoBox}>
+              <span style={styles.mobileInfoLabel}>Status</span>
+              <strong style={styles.mobileInfoValue}>
+                {currentPlayer ? getPlayerStatusText(currentPlayer) : "Unknown"}
+              </strong>
+            </div>
+
+            {isChaos && room?.gameStarted && (
+              <button
+                style={styles.mobileHistoryButton}
+                onClick={() => setShowRoomHistory((value) => !value)}
+              >
+                {showRoomHistory ? "Hide History" : "Room History"}
+              </button>
+            )}
+          </div>
+
+          <div style={styles.mobileTimerBox}>
+            <span>Timer:</span>
+            <strong>{room?.phaseEndsAt ? `${timeLeft}s` : "—"}</strong>
+
+            {isChaos && currentPlayer?.roomNumber && (
+              <>
+                <span>Your Room:</span>
+                <strong>{currentPlayer.roomNumber}</strong>
+              </>
+            )}
+          </div>
+
+          {renderRoomHistoryPanel()}
+        </aside>
+      );
+    }
+
     return (
-      <aside
-        style={
-          isMobile
-            ? { ...styles.sidebar, ...styles.mobileSidebar }
-            : styles.sidebar
-        }
-      >
+      <aside style={styles.sidebar}>
         <h2 style={styles.sidebarTitle}>Mafia 2.0</h2>
 
         <div style={styles.sidebarRoleBox}>
@@ -1042,7 +1075,9 @@ function App() {
               <span>{player.name}</span>
 
               <span style={styles.roomBadge}>
-                {player.selectedRoom ? `Room ${player.selectedRoom}` : "Not selected"}
+                {player.selectedRoom
+                  ? `Room ${player.selectedRoom}`
+                  : "Not selected"}
               </span>
             </div>
           ))}
@@ -1056,7 +1091,7 @@ function App() {
       <div style={wideCardStyle}>
         <h1 style={titleStyle}>Night {room?.dayNumber}</h1>
 
-        <p style={styles.timerText}>Time left: {timeLeft}s</p>
+        {!isMobile && <p style={styles.timerText}>Time left: {timeLeft}s</p>}
 
         {renderSystemMessages()}
         {renderNoticeBoard()}
@@ -1154,7 +1189,9 @@ function App() {
             </div>
 
             {selectedNightTarget && (
-              <p style={styles.smallText}>Heal selected. Wait for night to end.</p>
+              <p style={styles.smallText}>
+                Heal selected. Wait for night to end.
+              </p>
             )}
           </div>
         )}
@@ -1191,7 +1228,7 @@ function App() {
       <div style={wideCardStyle}>
         <h1 style={titleStyle}>Discussion</h1>
 
-        <p style={styles.timerText}>Time left: {timeLeft}s</p>
+        {!isMobile && <p style={styles.timerText}>Time left: {timeLeft}s</p>}
 
         {room?.announcement && (
           <div style={styles.announcementBox}>{room.announcement}</div>
@@ -1200,32 +1237,62 @@ function App() {
         {renderSystemMessages()}
         {renderNoticeBoard()}
 
-        <div style={styles.timeControlRow}>
-          <button
-            style={styles.smallButton}
-            disabled={!canParticipate || usedTimeControl}
-            onClick={() => handleAdjustDiscussionTime(30)}
-          >
-            +30 sec
-          </button>
+        {!isMobile && (
+          <>
+            <div style={styles.timeControlRow}>
+              <button
+                style={styles.smallButton}
+                disabled={!canParticipate || usedTimeControl}
+                onClick={() => handleAdjustDiscussionTime(30)}
+              >
+                +30 sec
+              </button>
 
-          <button
-            style={styles.smallButton}
-            disabled={!canParticipate || usedTimeControl}
-            onClick={() => handleAdjustDiscussionTime(-30)}
-          >
-            -30 sec
-          </button>
-        </div>
+              <button
+                style={styles.smallButton}
+                disabled={!canParticipate || usedTimeControl}
+                onClick={() => handleAdjustDiscussionTime(-30)}
+              >
+                -30 sec
+              </button>
+            </div>
 
-        {usedTimeControl && (
-          <p style={styles.smallText}>You already used your time control.</p>
+            {usedTimeControl && (
+              <p style={styles.smallText}>You already used your time control.</p>
+            )}
+          </>
         )}
 
-        <div style={styles.chatBox}>
-          <h2 style={styles.sectionTitle}>Live Chat</h2>
+        <div style={isMobile ? styles.mobileChatBox : styles.chatBox}>
+          <div style={styles.mobileChatHeader}>
+            <h2 style={styles.sectionTitle}>Live Chat</h2>
 
-          <div style={styles.chatMessages}>
+            {isMobile && (
+              <div style={styles.mobileTimeButtons}>
+                <button
+                  style={styles.mobileSmallButton}
+                  disabled={!canParticipate || usedTimeControl}
+                  onClick={() => handleAdjustDiscussionTime(30)}
+                >
+                  +30s
+                </button>
+
+                <button
+                  style={styles.mobileSmallButton}
+                  disabled={!canParticipate || usedTimeControl}
+                  onClick={() => handleAdjustDiscussionTime(-30)}
+                >
+                  -30s
+                </button>
+              </div>
+            )}
+          </div>
+
+          {isMobile && usedTimeControl && (
+            <p style={styles.smallText}>You already used your time control.</p>
+          )}
+
+          <div style={isMobile ? styles.mobileChatMessages : styles.chatMessages}>
             {(room?.chatMessages || []).map((chat) => (
               <div key={chat.id} style={styles.chatMessage}>
                 <strong>{getChatDisplayName(chat)}: </strong>
@@ -1278,7 +1345,7 @@ function App() {
       <div style={wideCardStyle}>
         <h1 style={titleStyle}>Vote Now</h1>
 
-        <p style={styles.timerText}>Time left: {timeLeft}s</p>
+        {!isMobile && <p style={styles.timerText}>Time left: {timeLeft}s</p>}
 
         {renderSystemMessages()}
         {renderNoticeBoard()}
@@ -1801,18 +1868,74 @@ const styles = {
     borderRight: "1px solid rgba(255, 255, 255, 0.12)",
     overflowY: "auto",
   },
-  mobileSidebar: {
+  mobileGameTopPanel: {
     width: "100%",
     minHeight: "auto",
-    padding: "14px",
+    padding: "12px",
     borderRight: "none",
     borderBottom: "1px solid rgba(255, 255, 255, 0.12)",
-    maxHeight: "none",
+    background: "rgba(0, 0, 0, 0.55)",
+    boxSizing: "border-box",
   },
   sidebarTitle: {
     marginTop: 0,
     fontSize: "26px",
     letterSpacing: "1px",
+  },
+  mobileGameTitle: {
+    margin: "0 0 10px",
+    textAlign: "center",
+    fontSize: "22px",
+    letterSpacing: "1px",
+  },
+  mobileStatusGrid: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr auto",
+    gap: "8px",
+    alignItems: "stretch",
+    marginBottom: "8px",
+  },
+  mobileInfoBox: {
+    padding: "10px",
+    borderRadius: "10px",
+    background: "rgba(255, 255, 255, 0.08)",
+    border: "1px solid rgba(255, 255, 255, 0.14)",
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
+    minWidth: 0,
+  },
+  mobileInfoLabel: {
+    fontSize: "11px",
+    color: "#cfc7ff",
+  },
+  mobileInfoValue: {
+    fontSize: "13px",
+    color: "#ffffff",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+  mobileHistoryButton: {
+    padding: "8px",
+    borderRadius: "10px",
+    border: "1px solid rgba(255, 255, 255, 0.25)",
+    background: "rgba(20, 184, 166, 0.22)",
+    color: "white",
+    fontSize: "11px",
+    fontWeight: "bold",
+    cursor: "pointer",
+  },
+  mobileTimerBox: {
+    display: "grid",
+    gridTemplateColumns: "auto 1fr auto 1fr",
+    gap: "6px",
+    alignItems: "center",
+    padding: "8px 10px",
+    borderRadius: "10px",
+    background: "rgba(255, 255, 255, 0.06)",
+    fontSize: "12px",
+    color: "#cfc7ff",
   },
   sidebarRoleBox: {
     padding: "14px",
@@ -2481,6 +2604,44 @@ const styles = {
     color: "white",
     fontWeight: "bold",
     cursor: "pointer",
+  },
+  mobileChatBox: {
+    textAlign: "left",
+    marginBottom: "16px",
+    padding: "10px",
+    borderRadius: "14px",
+    background: "rgba(0, 0, 0, 0.28)",
+    border: "1px solid rgba(255, 255, 255, 0.1)",
+  },
+  mobileChatHeader: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "8px",
+    marginBottom: "8px",
+  },
+  mobileTimeButtons: {
+    display: "flex",
+    gap: "6px",
+  },
+  mobileSmallButton: {
+    padding: "7px 9px",
+    borderRadius: "8px",
+    border: "1px solid rgba(255, 255, 255, 0.25)",
+    background: "rgba(255, 255, 255, 0.08)",
+    color: "white",
+    fontWeight: "bold",
+    fontSize: "11px",
+    cursor: "pointer",
+  },
+  mobileChatMessages: {
+    height: "150px",
+    overflowY: "auto",
+    padding: "10px",
+    borderRadius: "10px",
+    background: "rgba(0, 0, 0, 0.35)",
+    marginBottom: "10px",
+    fontSize: "13px",
   },
   chatBox: {
     textAlign: "left",
